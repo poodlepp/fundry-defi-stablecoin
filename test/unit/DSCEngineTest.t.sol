@@ -164,9 +164,24 @@ contract DSCEngineTest is StdCheats, Test {
         vm.stopPrank();
     }
 
+    modifier depositedCollateralAndMintedDsc() {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
+        vm.stopPrank();
+        _;
+    }
+
     ///////////////////////////////////
     // mintDsc Tests //
     ///////////////////////////////////
+    function testRevertsIfMintFails() public {
+        // mock a dsc, mint should always return false
+        // write the setup again
+        // prank test
+    }
+    // zero test
+    // health factor break
 
     ///////////////////////////////////
     // burnDsc Tests //
@@ -200,6 +215,7 @@ contract DSCEngineTest is StdCheats, Test {
     ////////////////////////
     // healthFactor Tests //
     ////////////////////////
+    
 
     ///////////////////////
     // Liquidation Tests //
