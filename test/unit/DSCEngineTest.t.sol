@@ -11,7 +11,7 @@ import { ERC20Mock } from "@openzeppelin/contracts/mocks/ERC20Mock.sol"; //Updat
 import { MockV3Aggregator } from "../mocks/MockV3Aggregator.sol";
 // import { MockMoreDebtDSC } from "../mocks/MockMoreDebtDSC.sol";
 // import { MockFailedMintDSC } from "../mocks/MockFailedMintDSC.sol";
-// import { MockFailedTransferFrom } from "../mocks/MockFailedTransferFrom.sol";
+import { MockFailedTransferFrom } from "../mocks/MockFailedTransferFrom.sol";
 // import { MockFailedTransfer } from "../mocks/MockFailedTransfer.sol";
 import { Test, console } from "forge-std/Test.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
@@ -102,6 +102,42 @@ contract DSCEngineTest is StdCheats, Test {
     ///////////////////////////////////////
     // depositCollateral Tests //
     ///////////////////////////////////////
+    function testDepositCollateralTransferFromFails() public {
+        // lib中的ERC20失败情况都是直接revert，并不会返回false，所以博主自行封装了一个可以返回false的mockERC20
+        // vm.startPrank(user);
+        // vm.expectRevert(DSCEngine.DSCEngine__TransferFailed.selector);
+        // dsce.depositCollateral(address(weth),amountCollateral);
+
+        // // Arrange - Setup
+        address owner = msg.sender;
+        vm.prank(owner);
+        MockFailedTransferFrom mockDsc = new MockFailedTransferFrom();
+        tokenAddresses = [address(mockDsc)];
+        priceFeedAddresses = [ethUsdPriceFeed];
+        vm.prank(owner);
+        DSCEngine mockDsce = new DSCEngine(tokenAddresses, priceFeedAddresses, address(mockDsc));
+        mockDsc.mint(user, amountCollateral);
+
+        vm.prank(owner);
+        mockDsc.transferOwnership(address(mockDsce));
+        // Arrange - User
+        vm.startPrank(user);
+        ERC20Mock(address(mockDsc)).approve(address(mockDsce), amountCollateral);
+        // Act / Assert
+        vm.expectRevert(DSCEngine.DSCEngine__TransferFailed.selector);
+        mockDsce.depositCollateral(address(mockDsc), amountCollateral);
+        vm.stopPrank();
+    }
+
+    function testRevertsWithUnapprovedCollateral() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector,address(2)));
+        dsce.depositCollateral(address(2),amountCollateral);
+    }
+
+    //CollateralZero
+    // dsc、collateral  amount check
+
 
     ///////////////////////////////////////
     // depositCollateralAndMintDsc Tests //
