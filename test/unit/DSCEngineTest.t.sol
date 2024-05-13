@@ -6,7 +6,7 @@ import { DeployDSC } from "../../script/DeployDSC.s.sol";
 import { DSCEngine } from "../../src/DSCEngine.sol";
 import { DecentralizedStableCoin } from "../../src/DecentralizedStableCoin.sol";
 import { HelperConfig } from "../../script/HelperConfig.s.sol";
-// import { ERC20Mock } from "@openzeppelin/contracts/mocks/ERC20Mock.sol"; Updated mock location
+import { ERC20Mock } from "@openzeppelin/contracts/mocks/ERC20Mock.sol"; //Updated mock location
 // import { ERC20Mock } from "../mocks/ERC20Mock.sol";
 import { MockV3Aggregator } from "../mocks/MockV3Aggregator.sol";
 // import { MockMoreDebtDSC } from "../mocks/MockMoreDebtDSC.sol";
@@ -62,8 +62,31 @@ contract DSCEngineTest is StdCheats, Test {
         //     vm.etch(ethUsdPriceFeed, address(aggregatorMock).code);
         //     vm.etch(btcUsdPriceFeed, address(aggregatorMock).code);
         // }
-        // ERC20Mock(weth).mint(user, STARTING_USER_BALANCE);
-        // ERC20Mock(wbtc).mint(user, STARTING_USER_BALANCE);
+        ERC20Mock(weth).mint(user, STARTING_USER_BALANCE);
+        ERC20Mock(wbtc).mint(user, STARTING_USER_BALANCE);
+    }
+
+    address[] public tokenAddresses;
+    address[] public priceFeedAddresses;
+
+    ///////////////////////
+    // Constructor Tests //
+    ///////////////////////   
+    function testConstructorLengthRevert() public {
+        tokenAddresses.push(weth);
+        priceFeedAddresses.push(ethUsdPriceFeed);
+        priceFeedAddresses.push(btcUsdPriceFeed);
+        vm.expectRevert(DSCEngine.DSCEngine_TokenAddressesAndPriceFeedAddressesAmountsDontMatch.selector);
+        new DSCEngine(tokenAddresses,priceFeedAddresses,address(dsc));
+    }
+    //////////////////
+    // Price Tests //
+    //////////////////
+
+    function testGetTokenAmountFromUsd() public {
+        uint256 expectedWeth = 0.05 ether;
+        uint256 amountWeth = dsce.getTokenAmountFromUsd(weth, 100 ether);
+        assertEq(amountWeth, expectedWeth);
     }
 
     function testGetUsdValue() public {
@@ -73,4 +96,70 @@ contract DSCEngineTest is StdCheats, Test {
         uint256 usdValue = dsce.getUsdValue(weth, ethAmount);
         assertEq(usdValue, expectedUsd);
     }
+
+
+
+    ///////////////////////////////////////
+    // depositCollateral Tests //
+    ///////////////////////////////////////
+
+    ///////////////////////////////////////
+    // depositCollateralAndMintDsc Tests //
+    ///////////////////////////////////////
+    
+    function testDepositAndMintSuccess() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce),amountCollateral);
+        dsce.depositCollateralAndMintDsc(weth,amountCollateral,amountToMint);
+        vm.stopPrank();
+    }
+
+    ///////////////////////////////////
+    // mintDsc Tests //
+    ///////////////////////////////////
+
+    ///////////////////////////////////
+    // burnDsc Tests //
+    ///////////////////////////////////
+
+    ///////////////////////////////////
+    // redeemCollateral Tests //
+    //////////////////////////////////
+
+        ///////////////////////////////////////
+    //  redeemCollateralForDsc
+    ///////////////////////////////////////
+
+    function testRedeemForDscCollateralAmountMoreThanZero() public {
+        vm.startPrank(user);
+        vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
+        dsce.redeemCollateralForDsc(weth,0,10);
+    }
+
+    function testRedeemForDscAllowedToken() public {
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector, address(0)));
+        dsce.redeemCollateralForDsc(address(0),1,10);
+    }
+
+    function testRedeemForDscPublic() public {
+        // vm.startPrank(user);
+        // dsce.redeemCollateralForDsc(weth,1,10);
+    }
+
+    ////////////////////////
+    // healthFactor Tests //
+    ////////////////////////
+
+    ///////////////////////
+    // Liquidation Tests //
+    ///////////////////////
+
+
+    ///////////////////////////////////
+    // View & Pure Function Tests //
+    //////////////////////////////////
+
+
+
 }
