@@ -141,19 +141,14 @@ contract DSCEngine is ReentrancyGuard {
         mintDsc(amountDscToMint);
     }
 
-    
-
     /*
      * @param tokenCollateralAddress: The ERC20 token address of the collateral you're depositing
      * @param amountCollateral: The amount of collateral you're depositing
      * @param amountDscToBurn: The amount of DSC you want to burn
      * @notice This function will withdraw your collateral and burn DSC in one transaction
      */
-    function redeemCollateralForDsc(
-        address tokenCollateralAddress,
-        uint256 amountCollateral,
-        uint256 amountDscToBurn
-    ) external 
+    function redeemCollateralForDsc(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDscToBurn)
+        external
         moreThanZero(amountCollateral)
         isAllowedToken(tokenCollateralAddress)
     {
@@ -163,16 +158,14 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     /**
-     * 
+     *
      * @param tokenCollateralAddress: The ERC20token address of the collateral you're redeeming
      * @param amountCollateral: The amount of collateral you're redeeming
      * @notice This function will redeem your collateral.
      * @notice If you have DSC minted, you will not be able to redeem until you burn your DSC
      */
-    function redeemCollateral(
-        address tokenCollateralAddress,
-        uint256 amountCollateral
-    ) external 
+    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
+        external
         moreThanZero(amountCollateral)
         nonReentrant
         isAllowedToken(tokenCollateralAddress)
@@ -181,12 +174,8 @@ contract DSCEngine is ReentrancyGuard {
         revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    
-
-    function burnDsc(uint256 amount) external 
-        moreThanZero(amount)
-    {
-        _burnDsc(amount,msg.sender,msg.sender);
+    function burnDsc(uint256 amount) external moreThanZero(amount) {
+        _burnDsc(amount, msg.sender, msg.sender);
         revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -203,11 +192,7 @@ contract DSCEngine is ReentrancyGuard {
      * @notice: A known bug would be if the protocol was only 100% collateralized, we wouldn't be able to liquidate anyone.
      * For example, if the price of the collateral plummeted before anyone could be liquidated.
      */
-    function liquidate(
-        address collateral,
-        address user,
-        uint256 debtToCover
-    ) 
+    function liquidate(address collateral, address user, uint256 debtToCover)
         external
         moreThanZero(debtToCover)
         nonReentrant
@@ -228,9 +213,7 @@ contract DSCEngine is ReentrancyGuard {
             revert DSCEngine__HealthFactorNotImproved();
         }
         revertIfHealthFactorIsBroken(msg.sender);
-
     }
-    
 
     ///////////////////
     // Public Functions
@@ -272,16 +255,13 @@ contract DSCEngine is ReentrancyGuard {
     ///////////////////
     // Private Functions
     ///////////////////
-    function _redeemCollateral(
-        address tokenCollateralAddress,
-        uint256 amountCollateral,
-        address from,
-        address to
-    ) private {
+    function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
+        private
+    {
         s_collateralDeposited[from][tokenCollateralAddress] -= amountCollateral;
         emit CollateralRedeemed(from, to, tokenCollateralAddress, amountCollateral);
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
-        if(!success) {
+        if (!success) {
             revert DSCEngine__TransferFailed();
         }
     }
@@ -296,8 +276,6 @@ contract DSCEngine is ReentrancyGuard {
         }
         i_dsc.burn(amountDscToBurn);
     }
-
-
 
     //////////////////
     //  Private & Internal view & Pure functions
@@ -347,10 +325,7 @@ contract DSCEngine is ReentrancyGuard {
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    function calculateHealthFactor(
-        uint256 totalDscMinted,
-        uint256 collateralValueInUsd
-    )
+    function calculateHealthFactor(uint256 totalDscMinted, uint256 collateralValueInUsd)
         external
         pure
         returns (uint256)

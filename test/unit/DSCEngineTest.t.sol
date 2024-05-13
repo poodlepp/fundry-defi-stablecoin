@@ -2,22 +2,22 @@
 
 pragma solidity 0.8.20;
 
-import { DeployDSC } from "../../script/DeployDSC.s.sol";
-import { DSCEngine } from "../../src/DSCEngine.sol";
-import { DecentralizedStableCoin } from "../../src/DecentralizedStableCoin.sol";
-import { HelperConfig } from "../../script/HelperConfig.s.sol";
-import { ERC20Mock } from "@openzeppelin/contracts/mocks/ERC20Mock.sol"; //Updated mock location
+import {DeployDSC} from "../../script/DeployDSC.s.sol";
+import {DSCEngine} from "../../src/DSCEngine.sol";
+import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol"; //Updated mock location
 // import { ERC20Mock } from "../mocks/ERC20Mock.sol";
-import { MockV3Aggregator } from "../mocks/MockV3Aggregator.sol";
+import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 // import { MockMoreDebtDSC } from "../mocks/MockMoreDebtDSC.sol";
 // import { MockFailedMintDSC } from "../mocks/MockFailedMintDSC.sol";
-import { MockFailedTransferFrom } from "../mocks/MockFailedTransferFrom.sol";
+import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 // import { MockFailedTransfer } from "../mocks/MockFailedTransfer.sol";
-import { Test, console } from "forge-std/Test.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
 
 contract DSCEngineTest is StdCheats, Test {
-        event CollateralRedeemed(address indexed redeemFrom, address indexed redeemTo, address token, uint256 amount); // if
+    event CollateralRedeemed(address indexed redeemFrom, address indexed redeemTo, address token, uint256 amount); // if
         // redeemFrom != redeemedTo, then it was liquidated
 
     DSCEngine public dsce;
@@ -42,7 +42,7 @@ contract DSCEngineTest is StdCheats, Test {
     address public liquidator = makeAddr("liquidator");
     uint256 public collateralToCover = 20 ether;
 
-        function setUp() external {
+    function setUp() external {
         DeployDSC deployer = new DeployDSC();
         (dsc, dsce, helperConfig) = deployer.run();
         (ethUsdPriceFeed, btcUsdPriceFeed, weth, wbtc, deployerKey) = helperConfig.activeNetworkConfig();
@@ -71,13 +71,13 @@ contract DSCEngineTest is StdCheats, Test {
 
     ///////////////////////
     // Constructor Tests //
-    ///////////////////////   
+    ///////////////////////
     function testConstructorLengthRevert() public {
         tokenAddresses.push(weth);
         priceFeedAddresses.push(ethUsdPriceFeed);
         priceFeedAddresses.push(btcUsdPriceFeed);
         vm.expectRevert(DSCEngine.DSCEngine_TokenAddressesAndPriceFeedAddressesAmountsDontMatch.selector);
-        new DSCEngine(tokenAddresses,priceFeedAddresses,address(dsc));
+        new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
     }
     //////////////////
     // Price Tests //
@@ -96,8 +96,6 @@ contract DSCEngineTest is StdCheats, Test {
         uint256 usdValue = dsce.getUsdValue(weth, ethAmount);
         assertEq(usdValue, expectedUsd);
     }
-
-
 
     ///////////////////////////////////////
     // depositCollateral Tests //
@@ -131,13 +129,12 @@ contract DSCEngineTest is StdCheats, Test {
 
     function testRevertsWithUnapprovedCollateral() public {
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector,address(2)));
-        dsce.depositCollateral(address(2),amountCollateral);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector, address(2)));
+        dsce.depositCollateral(address(2), amountCollateral);
     }
 
     //CollateralZero
     // dsc、collateral  amount check
-
 
     ///////////////////////////////////////
     // depositCollateralAndMintDsc Tests //
@@ -149,18 +146,18 @@ contract DSCEngineTest is StdCheats, Test {
         vm.startPrank(user);
         ERC20Mock(weth).approve(address(dsce), amountCollateral);
 
-        uint256 expectedHealthFactor = dsce.calculateHealthFactor(amountToMint, dsce.getUsdValue(weth, amountCollateral));
+        uint256 expectedHealthFactor =
+            dsce.calculateHealthFactor(amountToMint, dsce.getUsdValue(weth, amountCollateral));
         vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, expectedHealthFactor));
-        dsce.depositCollateralAndMintDsc(weth,amountCollateral,amountToMint);
+        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
         vm.stopPrank();
-
     }
 
     // amount check
     function testDepositAndMintSuccess() public {
         vm.startPrank(user);
-        ERC20Mock(weth).approve(address(dsce),amountCollateral);
-        dsce.depositCollateralAndMintDsc(weth,amountCollateral,amountToMint);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
         vm.stopPrank();
     }
 
@@ -191,20 +188,20 @@ contract DSCEngineTest is StdCheats, Test {
     // redeemCollateral Tests //
     //////////////////////////////////
 
-        ///////////////////////////////////////
+    ///////////////////////////////////////
     //  redeemCollateralForDsc
     ///////////////////////////////////////
 
     function testRedeemForDscCollateralAmountMoreThanZero() public {
         vm.startPrank(user);
         vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
-        dsce.redeemCollateralForDsc(weth,0,10);
+        dsce.redeemCollateralForDsc(weth, 0, 10);
     }
 
     function testRedeemForDscAllowedToken() public {
         vm.startPrank(user);
         vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector, address(0)));
-        dsce.redeemCollateralForDsc(address(0),1,10);
+        dsce.redeemCollateralForDsc(address(0), 1, 10);
     }
 
     function testRedeemForDscPublic() public {
@@ -215,17 +212,12 @@ contract DSCEngineTest is StdCheats, Test {
     ////////////////////////
     // healthFactor Tests //
     ////////////////////////
-    
 
     ///////////////////////
     // Liquidation Tests //
     ///////////////////////
 
-
     ///////////////////////////////////
     // View & Pure Function Tests //
     //////////////////////////////////
-
-
-
 }
