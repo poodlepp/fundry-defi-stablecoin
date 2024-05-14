@@ -43,7 +43,13 @@ contract StopOnRevertInvariants is StdInvariant, Test {
         (dsc, dsce, helperConfig) = deployer.run();
         (ethUsdPriceFeed, btcUsdPriceFeed, weth, wbtc,) = helperConfig.activeNetworkConfig();
         handler = new StopOnRevertHandler(dsce, dsc);
-        targetContract(address(handler));
+        // targetContract(address(handler));
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = StopOnRevertHandler.liquidate.selector;
+        targetSelector(FuzzSelector({
+            addr: address(handler),
+            selectors: selectors
+        }));
 
     }
 
