@@ -66,7 +66,6 @@ contract StopOnRevertHandler is Test {
         dscEngine.redeemCollateral(address(collateral), amountCollateral);
     }
 
-
     function burnDsc(uint256 amountDsc) public {
         amountDsc = bound(amountDsc, 0, dsc.balanceOf(msg.sender));
         if (amountDsc == 0) {
@@ -104,9 +103,9 @@ contract StopOnRevertHandler is Test {
             to = address(1);
         }
 
-        amountDsc = bound(amountDsc,0,dsc.balanceOf(msg.sender));
+        amountDsc = bound(amountDsc, 0, dsc.balanceOf(msg.sender));
         vm.prank(msg.sender);
-        dsc.transfer(to,amountDsc);
+        dsc.transfer(to, amountDsc);
     }
 
     // Aggregator

@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.20;
 
-
 import { Test } from "forge-std/Test.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { DSCEngine } from "../../../src/DSCEngine.sol";
@@ -46,11 +45,7 @@ contract StopOnRevertInvariants is StdInvariant, Test {
         // targetContract(address(handler));
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = StopOnRevertHandler.liquidate.selector;
-        targetSelector(FuzzSelector({
-            addr: address(handler),
-            selectors: selectors
-        }));
-
+        targetSelector(FuzzSelector({ addr: address(handler), selectors: selectors }));
     }
 
     function invariant_protocolMustHaveMoreValueThatTotalSupplyDollars() public view {
