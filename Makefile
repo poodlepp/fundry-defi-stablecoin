@@ -25,7 +25,9 @@ install :; forge install cyfrin/foundry-devops@0.1.0 --no-commit && forge instal
 
 build:; forge build
 
-test :; forge test 
+test :; forge test
+
+test1 :; forge test --match-test $(ARGS) -vvvv
 
 coverage :; forge coverage --report debug > coverage-report.txt
 

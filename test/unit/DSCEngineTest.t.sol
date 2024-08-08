@@ -17,6 +17,7 @@ import { Test, console } from "forge-std/Test.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 
 contract DSCEngineTest is StdCheats, Test {
+    event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
     event CollateralRedeemed(address indexed redeemFrom, address indexed redeemTo, address token, uint256 amount); // if
         // redeemFrom != redeemedTo, then it was liquidated
 
@@ -100,37 +101,90 @@ contract DSCEngineTest is StdCheats, Test {
     ///////////////////////////////////////
     // depositCollateral Tests //
     ///////////////////////////////////////
-    function testDepositCollateralTransferFromFails() public {
+
+    /**
+     * deposit success;
+     * deposit amount is expected;
+     * minting doesn't have to be done
+     */
+    function testDepositCollateral_Success() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        // vm.expectRevert();
+        dsce.depositCollateral(weth, amountCollateral);
+        vm.stopPrank();
+
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dsce.getAccountInformation(user);
+        uint256 expectedDepositedAmount = dsce.getTokenAmountFromUsd(weth, collateralValueInUsd);
+
+        vm.assertEq(totalDscMinted, 0);
+        vm.assertEq(expectedDepositedAmount, amountCollateral);
+    }
+
+    function testDepositCollateral_revertWhenDepositZero() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
+        dsce.depositCollateral(weth, 0);
+    }
+
+    function testDepositCollateral_revertWhenTokenNotAllow() public {
+        ERC20Mock tmpMock = new ERC20Mock("WW", "WW", msg.sender, 1000e8);
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector, address(tmpMock)));
+        dsce.depositCollateral(address(tmpMock), 1);
+    }
+
+    function testDepositCollateral_revertWhenNoApproval() public {
+        vm.startPrank(user);
+        // ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        vm.expectRevert();
+        dsce.depositCollateral(weth, amountCollateral);
+    }
+
+    function testDepositCollateral_revertWhenMoneyNotEnough() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        vm.expectRevert();
+        dsce.depositCollateral(weth, amountCollateral + amountCollateral);
+    }
+
+    function testDepositCollateral_TransferFromFails() public {
         // lib中的ERC20失败情况都是直接revert，并不会返回false，所以博主自行封装了一个可以返回false的mockERC20
         // vm.startPrank(user);
         // vm.expectRevert(DSCEngine.DSCEngine__TransferFailed.selector);
         // dsce.depositCollateral(address(weth),amountCollateral);
 
-        // // Arrange - Setup
-        address owner = msg.sender;
-        vm.prank(owner);
-        MockFailedTransferFrom mockDsc = new MockFailedTransferFrom();
-        tokenAddresses = [address(mockDsc)];
-        priceFeedAddresses = [ethUsdPriceFeed];
-        vm.prank(owner);
-        DSCEngine mockDsce = new DSCEngine(tokenAddresses, priceFeedAddresses, address(mockDsc));
-        mockDsc.mint(user, amountCollateral);
+        MockFailedTransferFrom failMock = new MockFailedTransferFrom();
+        tokenAddresses.push(address(failMock));
+        priceFeedAddresses.push(address(ethUsdPriceFeed));
 
-        vm.prank(owner);
-        mockDsc.transferOwnership(address(mockDsce));
-        // Arrange - User
+        DSCEngine mockDsce = new DSCEngine(tokenAddresses, priceFeedAddresses, address(ethUsdPriceFeed));
+        failMock.transferOwnership(address(mockDsce));
+
         vm.startPrank(user);
-        ERC20Mock(address(mockDsc)).approve(address(mockDsce), amountCollateral);
-        // Act / Assert
+        failMock.approve(address(mockDsce), amountCollateral);
         vm.expectRevert(DSCEngine.DSCEngine__TransferFailed.selector);
-        mockDsce.depositCollateral(address(mockDsc), amountCollateral);
+        mockDsce.depositCollateral(address(failMock), amountCollateral);
         vm.stopPrank();
     }
 
-    function testRevertsWithUnapprovedCollateral() public {
-        vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__TokenNotAllowed.selector, address(2)));
-        dsce.depositCollateral(address(2), amountCollateral);
+    modifier depositedCollateral() {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateral(weth, amountCollateral);
+        vm.stopPrank();
+        _;
+    }
+
+    function testDepositCollateral_emitCheck() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        vm.expectEmit(true, true, true, false, address(dsce));
+        emit CollateralDeposited(user, weth, amountCollateral);
+        // vm.expectEmit(address(dsce), abi.encode(DSCEngine.CollateralDeposited(user, weth, amountCollateral)));
+        dsce.depositCollateral(weth, amountCollateral);
+        vm.stopPrank();
     }
 
     //CollateralZero
