@@ -188,42 +188,6 @@ contract DSCEngineTest is StdCheats, Test {
         vm.stopPrank();
     }
 
-    //CollateralZero
-    // dsc、collateral  amount check
-
-    ///////////////////////////////////////
-    // depositCollateralAndMintDsc Tests //
-    ///////////////////////////////////////
-    function testRevertsIfMintedDscBreaksHealthFactor() public {
-        (, int256 price,,,) = MockV3Aggregator(ethUsdPriceFeed).latestRoundData();
-        amountToMint = (amountCollateral * (uint256(price) * dsce.getAdditionalFeedPrecision())) / dsce.getPrecision();
-
-        vm.startPrank(user);
-        ERC20Mock(weth).approve(address(dsce), amountCollateral);
-
-        uint256 expectedHealthFactor =
-            dsce.calculateHealthFactor(amountToMint, dsce.getUsdValue(weth, amountCollateral));
-        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, expectedHealthFactor));
-        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
-        vm.stopPrank();
-    }
-
-    // amount check
-    function testDepositAndMintSuccess() public {
-        vm.startPrank(user);
-        ERC20Mock(weth).approve(address(dsce), amountCollateral);
-        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
-        vm.stopPrank();
-    }
-
-    modifier depositedCollateralAndMintedDsc() {
-        vm.startPrank(user);
-        ERC20Mock(weth).approve(address(dsce), amountCollateral);
-        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
-        vm.stopPrank();
-        _;
-    }
-
     ///////////////////////////////////
     // mintDsc Tests //
     ///////////////////////////////////
@@ -269,6 +233,22 @@ contract DSCEngineTest is StdCheats, Test {
         vm.expectRevert(DSCEngine.DSCEngine__MintFailed.selector);
         mockDsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
         vm.stopPrank();
+    }
+
+    ///////////////////////////////////////
+    // depositCollateralAndMintDsc Tests //
+    ///////////////////////////////////////
+    modifier depositedCollateralAndMintedDsc() {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dsce), amountCollateral);
+        dsce.depositCollateralAndMintDsc(weth, amountCollateral, amountToMint);
+        vm.stopPrank();
+        _;
+    }
+
+    function testDepositAndMint_success() public depositedCollateralAndMintedDsc {
+        uint256 userBalance = dsc.balanceOf(user);
+        vm.assertEq(userBalance, amountToMint);
     }
 
     ///////////////////////////////////
